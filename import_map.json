@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "oak": "https://deno.land/x/oak/mod.ts",
+    "kubernetes_client": "https://deno.land/x/kubernetes_client@v0.3.2/mod.ts",
+    "kubernetes_apis": "https://deno.land/x/kubernetes_apis/builtin/core@v1/mod.ts"
+  }
+}
