@@ -41,6 +41,16 @@ export const createPod = async ({ image, name }: PodConfig) => {
           {
             image,
             name: `${name}-1`,
+            resources: {
+              limits: {
+                cpu: "100m",
+                memory: "100Mi",
+              },
+              requests: {
+                cpu: "50m",
+                memory: "50Mi",
+              },
+            },
           } as Container,
         ],
       } as PodSpec,
