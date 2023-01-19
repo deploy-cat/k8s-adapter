@@ -1,9 +1,6 @@
 import { Application, Router } from "oak";
-import { autoDetectClient } from "kubernetes_client";
-import { CoreV1Api } from "kubernetes_apis";
-
-const k8s = await autoDetectClient();
-const coreApi = new CoreV1Api(k8s).namespace("default");
+import { validate } from "./helpers.ts";
+import { createDeployment, DeploymentConfig } from "./k8s.ts";
 
 const app = new Application();
 
@@ -26,7 +23,9 @@ app.use(async (ctx, next) => {
   ctx.response.headers.set("X-Response-Time", `${ms}ms`);
 });
 
-const router = new Router();
+const router = new Router({
+  prefix: "/api/v1",
+});
 router
   .get("/", (ctx) => {
     ctx.response.body = "Hello world!\n";
@@ -41,9 +40,21 @@ router
       ctx.response.status = 404;
       ctx.response.body = { status: "pod not found" };
     }
+  })
+  .post("/deployment", async (ctx) => {
+    const config = await ctx.request.body().value;
+    validate(config, {
+      name: (v) => v?.length > 3 || "to short",
+      image: (v) => v?.length > 3 || "to short",
+      host: (v) => v?.length > 10 || "to short",
+    });
+    await createDeployment(config as DeploymentConfig);
+    ctx.response.status = 201;
+    ctx.response.body = { status: "done", config };
   });
 
 app.use(router.routes());
 app.use(router.allowedMethods());
 
+console.log("start app");
 await app.listen({ port: 3000 });
