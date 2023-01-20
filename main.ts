@@ -1,6 +1,6 @@
 import { Application, Router } from "oak";
 import { validate } from "./helpers.ts";
-import { createDeployment, DeploymentConfig } from "./k8s.ts";
+import { AppConfig, deployApp, deleteApp } from "./k8s.ts";
 
 const app = new Application();
 
@@ -41,16 +41,24 @@ router
       ctx.response.body = { status: "pod not found" };
     }
   })
-  .post("/deployment", async (ctx) => {
-    const config = await ctx.request.body().value;
-    validate(config, {
-      name: (v) => v?.length > 3 || "to short",
-      image: (v) => v?.length > 3 || "to short",
-      host: (v) => v?.length > 10 || "to short",
+  .post("/app/:name", async (ctx) => {
+    const app = {
+      ...await ctx.request.body().value,
+      name: ctx.params.name,
+    };
+    validate(app, {
+      name: (v) => v?.length > 3 || "too short",
+      image: (v) => v?.length > 3 || "too short",
+      host: (v) => v?.length > 10 || "too short",
     });
-    await createDeployment(config as DeploymentConfig);
+    await deployApp(app as AppConfig);
     ctx.response.status = 201;
-    ctx.response.body = { status: "done", config };
+    ctx.response.body = { status: "done", app };
+  })
+  .delete("/app/:name", async (ctx) => {
+    await deleteApp(ctx.params.name);
+    ctx.response.status = 200;
+    ctx.response.body = { status: "deleted" };
   });
 
 app.use(router.routes());
