@@ -1,6 +1,6 @@
 import { Application, Router } from "oak";
 import { validate } from "./helpers.ts";
-import { AppConfig, deployApp, deleteApp } from "./k8s.ts";
+import { AppConfig, coreApi, deleteApp, deployApp } from "./k8s.ts";
 
 const app = new Application();
 
@@ -53,7 +53,7 @@ router
     });
     await deployApp(app as AppConfig);
     ctx.response.status = 201;
-    ctx.response.body = { status: "done", app };
+    ctx.response.body = { status: "created", app };
   })
   .delete("/app/:name", async (ctx) => {
     await deleteApp(ctx.params.name);

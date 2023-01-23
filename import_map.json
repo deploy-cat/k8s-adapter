@@ -2,6 +2,9 @@
   "imports": {
     "oak": "https://deno.land/x/oak/mod.ts",
     "kubernetes_client": "https://deno.land/x/kubernetes_client@v0.3.2/mod.ts",
-    "kubernetes_apis": "https://deno.land/x/kubernetes_apis/builtin/core@v1/mod.ts"
+    "kubernetes_apis/builtin/core": "https://deno.land/x/kubernetes_apis@v0.3.2/builtin/core@v1/mod.ts",
+    "kubernetes_apis/builtin/meta": "https://deno.land/x/kubernetes_apis@v0.3.2/builtin/meta@v1/structs.ts",
+    "kubernetes_apis/builtin/apps": "https://deno.land/x/kubernetes_apis@v0.3.2/builtin/apps@v1/mod.ts",
+    "kubernetes_apis/builtin/networking": "https://deno.land/x/kubernetes_apis@v0.3.2/builtin/networking.k8s.io@v1/mod.ts"
   }
 }
