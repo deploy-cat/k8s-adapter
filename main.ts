@@ -1,6 +1,13 @@
 import { Application, Router } from "oak";
-import { validate } from "./helpers.ts";
-import { AppConfig, coreApi, deleteApp, deployApp } from "./k8s.ts";
+import { ValidateError } from "./helpers.ts";
+import {
+  AppConfig,
+  createApp,
+  deleteApp,
+  getApp,
+  getAppsfromUser,
+} from "./k8s.ts";
+import { ObjectRule, Rule } from "hoyams";
 
 const app = new Application();
 
@@ -23,22 +30,44 @@ app.use(async (ctx, next) => {
   ctx.response.headers.set("X-Response-Time", `${ms}ms`);
 });
 
+app.use(async (ctx, next) => {
+  try {
+    await next();
+  } catch (e) {
+    if (e instanceof ValidateError) {
+      ctx.response.body = { status: "error", message: e.message, map: e.map };
+      ctx.response.status = 400;
+    } else if (e instanceof Error) {
+      ctx.response.body = { status: "error", message: e.message };
+      ctx.response.status = 500;
+    } else {
+      ctx.response.body = { status: "error" };
+      ctx.response.status = 500;
+    }
+  }
+});
+
 const router = new Router({
   prefix: "/api/v1",
 });
 router
-  .get("/", (ctx) => {
-    ctx.response.body = "Hello world!\n";
-  })
-  .get("/pods", async (ctx) => {
-    ctx.response.body = await coreApi.getPodList();
-  })
-  .get("/pods/:id", async (ctx) => {
+  .get("/apps", async (ctx) => {
+    const user = new Rule((v) =>
+      typeof v === "string" && !!v?.match(/[\w_-]{3,}/) || "invalid"
+    ).validate(ctx.request.headers.get("user"));
     try {
-      ctx.response.body = await coreApi.getPod(ctx.params.id);
+      ctx.response.body = { apps: await getAppsfromUser(user as string) };
     } catch (e) {
       ctx.response.status = 404;
-      ctx.response.body = { status: "pod not found" };
+      ctx.response.body = { status: "app not found" };
+    }
+  })
+  .get("/app/:name", async (ctx) => {
+    try {
+      ctx.response.body = { app: await getApp(ctx.params.name) };
+    } catch (e) {
+      ctx.response.status = 404;
+      ctx.response.body = { status: "app not found" };
     }
   })
   .post("/app/:name", async (ctx) => {
@@ -46,12 +75,22 @@ router
       ...await ctx.request.body().value,
       name: ctx.params.name,
     };
-    validate(app, {
-      name: (v) => v?.length > 3 || "too short",
-      image: (v) => v?.length > 3 || "too short",
-      host: (v) => v?.length > 10 || "too short",
+    new ObjectRule({
+      name: new Rule((v) =>
+        typeof v === "string" && v?.length > 3 || "too short"
+      ),
+      image: new Rule((v) =>
+        typeof v === "string" && v?.length > 3 || "too short"
+      ),
+      host: new Rule((v) =>
+        typeof v === "string" && v?.length > 10 || "too short"
+      ),
+      user: new Rule((v) =>
+        typeof v === "string" && !!v?.match(/^[\w_-]{3,}$/) || "invalid"
+      ),
+      port: new Rule((v) => typeof v === "number" || "invalid type"),
     });
-    await deployApp(app as AppConfig);
+    await createApp(app as AppConfig);
     ctx.response.status = 201;
     ctx.response.body = { status: "created", app };
   })
